@@ -6,10 +6,10 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 import yaml
 
+from bin.services.geo_points.geo_points_service import GeoPointService
+
 with open("bin/handlers/dictionary/dictionary.yaml", "r", encoding="utf-8") as file:
     messages = yaml.safe_load(file)["choose_point"]
-
-point_router = Router()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,10 +21,12 @@ class PointHandler:
         waiting_lat = State()
         waiting_city = State()
         waiting_confirm = State()
+        waiting_error = State()
 
-    def __init__(self):
+    def __init__(self, geo_point_service: GeoPointService):
+        self.geo_point_service = geo_point_service
+
         self.router = Router()
-
         self.router.callback_query.register(self.handle_type, self.FSM.waiting_type)
         self.router.message.register(self.handle_long, self.FSM.waiting_long)
         self.router.message.register(self.handle_lat, self.FSM.waiting_lat)
@@ -32,6 +34,7 @@ class PointHandler:
         self.router.callback_query.register(
             self.handle_confirm, self.FSM.waiting_confirm
         )
+        self.router.callback_query.register(self.handle_error, self.FSM.waiting_error)
 
     async def entry_point(self, message_or_callback, state: FSMContext):
         keyboard = InlineKeyboardMarkup(
@@ -115,20 +118,27 @@ class PointHandler:
         if method == "cords":
             long = state_data["long"]
             lat = state_data["lat"]
-            city = "Unknown"
+            try:
+                point = self.geo_point_service.get_point_by_coordinates(lat, long)
+            except Exception as e:
+                logging.error(e)
+                await self.ask_error(message, state)
+                return
         if method == "city":
             city = state_data["city"]
-            long = "Unknown"
-            lat = "Unknown"
-        point = {
-            "method": method,
-            "long": long,
-            "lat": lat,
-            "city": city,
-        }
-        await state.update_data({"point": point})
+            try:
+                point = self.geo_point_service.get_point_by_city(city)
+            except Exception as e:
+                logging.error(e)
+                await self.ask_error(message, state)
+                return
+
+        await state.update_data(point=point)
         await message.answer(
-            messages["confirm_message"].format(**point), reply_markup=keyboard
+            messages["confirm_message"].format(
+                long=point.longitude, lat=point.latitude, city=point.city
+            ),
+            reply_markup=keyboard,
         )
         await state.set_state(self.FSM.waiting_confirm)
 
@@ -143,3 +153,32 @@ class PointHandler:
             await (await state.get_data("cancel_callback")).succes_callback(
                 callback_query, state
             )
+
+    async def ask_error(self, message: types.Message, state: FSMContext):
+        logging.info("got error")
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=messages["error_message_try_again"],
+                        callback_data="try_again",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=messages["error_message_cancel"], callback_data="cancel"
+                    )
+                ],
+            ]
+        )
+        await message.answer(messages["error_message"], reply_markup=keyboard)
+        await state.set_state(self.FSM.waiting_error)
+
+    async def handle_error(
+        self, callback_query: types.CallbackQuery, state: FSMContext
+    ):
+        logging.info("got error status: " + callback_query.data)
+        if callback_query.data == "try_again":
+            await self.entry_point(callback_query, state)
+        elif callback_query.data == "cancel":
+            await (await state.get_value("cancel_callback"))(callback_query, state)
