@@ -54,6 +54,6 @@ python main.py
 Бот будет готов к использованию в вашем Telegram.
 
 ## Примечания
-- Получить ключ API для Yandex Weather можно на [Yandex Weather Api]("https://yandex.ru/dev/")
+- Получить ключ API для Yandex Weather можно на [Yandex Weather Api](https://yandex.ru/dev/)
 - Получить ключ API для Yandex Geocoder можно на [Yandex Maps Api](https://yandex.ru/maps-api/products).
 - Токен для телеграм-бота можно создать с помощью [BotFather](https://core.telegram.org/bots).
