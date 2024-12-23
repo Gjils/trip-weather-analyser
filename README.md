@@ -37,9 +37,8 @@ venv\Scripts\activate
 
 # На macOS и Linux
 python3 -m venv venv
-```
-
 source venv/bin/activate
+```
 ### 3. Установка зависимостей
 Убедитесь, что у вас установлен Python 3.7 или новее. Затем установите необходимые зависимости:
 ```bash
