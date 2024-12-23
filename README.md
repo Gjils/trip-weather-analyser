@@ -27,13 +27,26 @@ git clone https://github.com/Gjils/trip-weather-analyser.git
 cd trip-weather-analyser
 ```
 
-### 2. Установка зависимостей
+
+### 2. Создание виртуального окружения
+Создайте и активируйте виртуальное окружение для изоляции зависимостей проекта:
+``` bash
+# На Windows
+python -m venv venv
+venv\Scripts\activate
+
+# На macOS и Linux
+python3 -m venv venv
+```
+
+source venv/bin/activate
+### 3. Установка зависимостей
 Убедитесь, что у вас установлен Python 3.7 или новее. Затем установите необходимые зависимости:
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Настройка переменных окружения
+### 4. Настройка переменных окружения
 Создайте файл `.env` в корневой папке проекта и добавьте в него следующие переменные:
 ```
 WEATHER_KEY="YOUR_KEY"
@@ -41,11 +54,11 @@ GEOCODE_KEY="YOUR_KEY"
 BOT_TOKEN="YOUR_KEY"
 ```
 
-### 4. Дополнительные файлы
+### 5. Дополнительные файлы
 - **`commands.txt`**: В корне проекта находится текстовый файл `commands.txt`, содержащий описание всех команд для BotFather, необходимых для настройки вашего бота.
 - **`profile_picture.png`**: Файл `profile_picture.png` содержит аватар для вашего бота, который можно загрузить через BotFather.
 
-### 5. Запуск бота
+### 6. Запуск бота
 Для запуска бота выполните команду:
 ```bash
 python main.py
