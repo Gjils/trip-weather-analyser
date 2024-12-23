@@ -19,15 +19,12 @@ locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 logging.basicConfig(level=logging.INFO)
 
-# Токен вашего бота
 BOT_TOKEN = "7905488641:AAEdGi1LV9BJ2GhmaTMB-s52egGLh0wG-Dw"
 GEOCODER_KEY = "40b28dca-6c3e-4564-ad24-2bc3d32bc304"
 WEATHER_KEY = "17a7092b-6af1-4a42-b451-0036be640009"
 
 
-# Основная функция запуска
 async def main():
-    # Инициализация бота и диспетчера
     bot = Bot(token=BOT_TOKEN)
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
