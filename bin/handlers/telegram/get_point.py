@@ -11,8 +11,6 @@ from bin.services.geo_points.geo_points_service import GeoPointService
 with open("bin/handlers/dictionary/dictionary.yaml", "r", encoding="utf-8") as file:
     messages = yaml.safe_load(file)["choose_point"]
 
-logging.basicConfig(level=logging.INFO)
-
 
 class PointHandler:
     class FSM(StatesGroup):

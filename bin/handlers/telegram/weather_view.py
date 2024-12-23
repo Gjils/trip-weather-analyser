@@ -1,15 +1,20 @@
 import logging
+import uuid
 from aiogram import Router, types
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, BufferedInputFile
+from PIL import Image
 
+
+from telegram import InputMediaPhoto
 import yaml
+
+from bin.entities.weather import Weather
+from bin.services.weather.weather_service import WeatherService
 
 with open("bin/handlers/dictionary/dictionary.yaml", "r", encoding="utf-8") as file:
     messages = yaml.safe_load(file)["weather_view"]
-
-logging.basicConfig(level=logging.INFO)
 
 
 class WeatherViewHandler:
@@ -19,7 +24,9 @@ class WeatherViewHandler:
         waiting_measure = State()
         showing_info = State()
 
-    def __init__(self):
+    def __init__(self, weather_service: WeatherService):
+        self.weather_service = weather_service
+
         self.router = Router()
         self.router.callback_query.register(self.handle_point, self.FSM.waiting_point)
         self.router.callback_query.register(self.handle_date, self.FSM.waiting_date)
@@ -89,7 +96,7 @@ class WeatherViewHandler:
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="Все даты", callback_data="all")]
+                [InlineKeyboardButton(text=messages["all_dates"], callback_data="all")]
             ]
             + [
                 [
@@ -152,12 +159,12 @@ class WeatherViewHandler:
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text=messages["min_temp"], callback_data="min_temp"
+                        text=messages["temp_min"], callback_data="temp_min"
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text=messages["max_temp"], callback_data="max_temp"
+                        text=messages["temp_max"], callback_data="temp_max"
                     )
                 ],
                 [
@@ -174,9 +181,8 @@ class WeatherViewHandler:
                 [InlineKeyboardButton(text=messages["back"], callback_data="back")],
             ]
         )
-        await callback_query.message.edit_text(
-            messages["measure"], reply_markup=keyboard
-        )
+        await callback_query.message.answer(messages["measure"], reply_markup=keyboard)
+        await callback_query.message.delete()
         logging.info("ask for measure")
         await state.set_state(self.FSM.waiting_measure)
         logging.info("waiting for measure state")
@@ -185,9 +191,50 @@ class WeatherViewHandler:
         self, callback_query: types.CallbackQuery, state: FSMContext
     ):
         await state.update_data(back_callback=self.ask_measure)
-        logging.info("got measure: " + callback_query.data)
-        await state.update_data(measure=callback_query.data)
-        await self.ask_additional_points(callback_query, state)
+        logging.info("got choose measure: " + callback_query.data)
+        if callback_query.data == "back":
+            await self.ask_date(callback_query, state)
+        elif callback_query.data in [
+            "temp_min",
+            "temp_max",
+            "wind_speed",
+            "precipitation_mm",
+        ]:
+            await state.update_data(measure=callback_query.data)
+            await self.show_measure(callback_query, state)
+        else:
+            await callback_query.answer(messages["command_error"])
+
+    async def show_measure(
+        self, callback_query: types.CallbackQuery, state: FSMContext
+    ):
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=messages["back"], callback_data="back")]
+            ]
+        )
+        measure = await state.get_value("measure")
+        point = await state.get_value("point")
+        trip_forecast = await state.get_value("trip_forecast")
+        await state.set_state(self.FSM.showing_info)
+        try:
+            image_stream = self.weather_service.plot_forecast_measure(
+                trip_forecast, point, measure
+            )
+            await callback_query.message.answer_photo(
+                BufferedInputFile(image_stream.read(), filename=f"{uuid.uuid4()}.png"),
+                caption=messages["plot"].format(
+                    point=point, measure=Weather.get_measure_string(measure)
+                ),
+                reply_markup=keyboard,
+            )
+            await callback_query.message.delete()
+
+        except Exception as e:
+            logging.error(e)
+            await callback_query.message.edit_text(
+                messages["plot_error"], reply_markup=keyboard
+            )
 
     async def handle_back(self, callback_query: types.CallbackQuery, state: FSMContext):
         logging.info("got back: " + callback_query.data)

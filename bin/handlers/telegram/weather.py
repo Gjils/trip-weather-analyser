@@ -14,8 +14,6 @@ from bin.services.weather.weather_service import WeatherService
 with open("bin/handlers/dictionary/dictionary.yaml", "r", encoding="utf-8") as file:
     messages = yaml.safe_load(file)["trip_weather"]
 
-logging.basicConfig(level=logging.INFO)
-
 
 class WeatherHandler:
     class FSM(StatesGroup):
@@ -23,6 +21,7 @@ class WeatherHandler:
         waiting_ending_point = State()
         waiting_additional_points = State()
         waiting_duration = State()
+        waiting_custom_duration = State()
         waiting_finish = State()
 
     def __init__(
@@ -47,7 +46,12 @@ class WeatherHandler:
         self.router.callback_query.register(
             self.handle_additional_points, self.FSM.waiting_additional_points
         )
-        self.router.message.register(self.handle_duration, self.FSM.waiting_duration)
+        self.router.callback_query.register(
+            self.handle_duration, self.FSM.waiting_duration
+        )
+        self.router.message.register(
+            self.handle_custom_duration, self.FSM.waiting_custom_duration
+        )
         self.router.callback_query.register(self.handle_finish, self.FSM.waiting_finish)
 
     async def entry_point(self, message_or_callback, state: FSMContext):
@@ -88,6 +92,7 @@ class WeatherHandler:
             await state.update_data(cancel_callback=self.entry_point)
             await self.point_handler.entry_point(callback_query, state)
         elif status == "cancel":
+            await callback_query.answer(messages["goodbye"])
             await callback_query.message.delete()
             await state.clear()
 
@@ -132,6 +137,7 @@ class WeatherHandler:
             await state.update_data(cancel_callback=self.ask_ending_point)
             await self.point_handler.entry_point(callback_query, state)
         elif status == "cancel":
+            await callback_query.answer(messages["goodbye"])
             await callback_query.message.delete()
             await state.clear()
 
@@ -200,17 +206,53 @@ class WeatherHandler:
     async def ask_duration(
         self, callback_query: types.CallbackQuery, state: FSMContext
     ):
-        await callback_query.message.edit_text(messages["duration"])
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=messages["1 day"], callback_data="1")],
+                [InlineKeyboardButton(text=messages["3 days"], callback_data="3")],
+                [InlineKeyboardButton(text=messages["5 days"], callback_data="5")],
+                [InlineKeyboardButton(text=messages["7 days"], callback_data="7")],
+                [InlineKeyboardButton(text=messages["custom"], callback_data="custom")],
+            ]
+        )
+        await callback_query.message.edit_text(
+            messages["duration"], reply_markup=keyboard
+        )
         logging.info("ask duration")
         await state.set_state(self.FSM.waiting_duration)
         logging.info("waiting for duration state")
 
-    async def handle_duration(self, message: types.Message, state: FSMContext):
-        logging.info("got duration: " + message.text)
-        await state.update_data(duration=message.text)
-        await self.ask_finish(message, state)
+    async def handle_duration(
+        self, callback_query: types.CallbackQuery, state: FSMContext
+    ):
+        duration = callback_query.data
+        logging.info("got duration: " + duration)
+        if duration == "custom":
+            await self.ask_custom_duration(callback_query, state)
+        elif duration in ["1", "3", "5", "7"]:
+            await state.update_data(duration=int(duration))
+            await self.ask_finish(callback_query, state)
+        else:
+            await callback_query.answer(messages["command_error"])
 
-    async def ask_finish(self, message: types.Message, state: FSMContext):
+    async def ask_custom_duration(
+        self, callback_query: types.CallbackQuery, state: FSMContext
+    ):
+        await callback_query.message.edit_text(messages["custom_duration"])
+        logging.info("ask custom duration")
+        await state.set_state(self.FSM.waiting_custom_duration)
+        logging.info("waiting for custom duration state")
+
+    async def handle_custom_duration(self, message: types.Message, state: FSMContext):
+        duration = message.text
+        logging.info("got custom duration: " + duration)
+        if duration.isdigit() and int(duration) in range(1, 8):
+            await state.update_data(duration=int(duration))
+            await self.ask_finish(message, state)
+        else:
+            await message.answer(messages["duration_error"])
+
+    async def ask_finish(self, message_or_callback: types.Message, state: FSMContext):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -234,7 +276,14 @@ class WeatherHandler:
             "points": "".join([f"• {str(item)}\n" for item in additional_points]),
             "duration": str(await state.get_value("duration")),
         }
-        await message.answer(messages["finish"].format(**data), reply_markup=keyboard)
+        if isinstance(message_or_callback, types.Message):
+            await message_or_callback.answer(
+                messages["finish"].format(**data), reply_markup=keyboard
+            )
+        elif isinstance(message_or_callback, types.CallbackQuery):
+            await message_or_callback.message.edit_text(
+                messages["finish"].format(**data), reply_markup=keyboard
+            )
         logging.info("ask finish")
         await state.set_state(self.FSM.waiting_finish)
         logging.info("waiting for finish state")
@@ -245,6 +294,7 @@ class WeatherHandler:
         if status == "confirm":
             await self.show_result(callback_query, state)
         elif status == "cancel":
+            await callback_query.answer(messages["goodbye"])
             await callback_query.message.delete()
             await state.clear()
 

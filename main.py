@@ -1,7 +1,9 @@
 import asyncio
+import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from bin.handlers.telegram.fallback import FallbackHandler
 from bin.handlers.telegram.get_point import PointHandler
 from bin.handlers.telegram.main_handler import MainHandler
 from bin.handlers.telegram.weather import WeatherHandler
@@ -14,6 +16,8 @@ from bin.services.weather.yandex_weather_client import YandexWeatherClient
 import locale
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
+
+logging.basicConfig(level=logging.INFO)
 
 # Токен вашего бота
 BOT_TOKEN = "7905488641:AAEdGi1LV9BJ2GhmaTMB-s52egGLh0wG-Dw"
@@ -34,24 +38,25 @@ async def main():
     geo_point_service = GeoPointService(repository=yandex_geocoder_client)
     weather_service = WeatherService(repository=yandex_weather_client)
 
+    fallback_handler = FallbackHandler()
     point_handler = PointHandler(geo_point_service=geo_point_service)
-    weather_view_handler = WeatherViewHandler()
+    weather_view_handler = WeatherViewHandler(weather_service=weather_service)
     weather_handler = WeatherHandler(
         point_handler=point_handler,
         weather_view_handler=weather_view_handler,
         weather_service=weather_service,
     )
-    main_handler = MainHandler(weather_handler=weather_handler)
+    main_handler = MainHandler(
+        weather_handler=weather_handler, fallback_handler=fallback_handler
+    )
 
     dp.include_router(main_handler.router)
 
-    # Запуск polling
     try:
         await dp.start_polling(bot)
     finally:
         await bot.session.close()
 
 
-# Запуск приложения
 if __name__ == "__main__":
     asyncio.run(main())

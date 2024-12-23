@@ -34,3 +34,28 @@ class Weather:
 
     def format_date(self):
         return self.date.strftime("%-d %B %Y")
+
+    def format_date_short(self):
+        return self.date.strftime("%-d %B")
+
+    @staticmethod
+    def get_measure_string(measure: str):
+        if measure == "temp_min":
+            return "Минимальная температура"
+        elif measure == "temp_max":
+            return "Максимальная температура"
+        elif measure == "wind_speed":
+            return "Скорость ветра"
+        elif measure == "precipitation_mm":
+            return "Осадки"
+
+    @staticmethod
+    def get_measure_with_units_string(measure: str):
+        if measure == "temp_min":
+            return "Минимальная температура, °C"
+        elif measure == "temp_max":
+            return "Максимальная температура, °C"
+        elif measure == "wind_speed":
+            return "Скорость ветра, м/с"
+        elif measure == "precipitation_mm":
+            return "Осадки, мм"
