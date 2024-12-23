@@ -16,7 +16,7 @@ class FallbackHandler:
         self.router.callback_query.register(self.handle_unknown_callback)
 
     async def handle_fallback(self, message: Message):
-        logging.info("got fallback: " + message.text)
+        logging.info("got fallback: " + message.text if message.text else "")
         try:
             await message.delete()
         except TelegramBadRequest:

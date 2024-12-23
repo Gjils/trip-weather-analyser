@@ -14,14 +14,18 @@ from bin.services.weather.weather_service import WeatherService
 from bin.services.weather.yandex_weather_client import YandexWeatherClient
 
 import locale
+from dotenv import load_dotenv
+import os
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "7905488641:AAEdGi1LV9BJ2GhmaTMB-s52egGLh0wG-Dw"
-GEOCODER_KEY = "40b28dca-6c3e-4564-ad24-2bc3d32bc304"
-WEATHER_KEY = "17a7092b-6af1-4a42-b451-0036be640009"
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GEOCODER_KEY = os.getenv("GEOCODER_KEY")
+WEATHER_KEY = os.getenv("WEATHER_KEY")
 
 
 async def main():

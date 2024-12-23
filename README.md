@@ -13,6 +13,11 @@
 - **Yandex Weather API** — для получения прогноза погоды.
 - **Yandex Geocode API** — для обработки географических координат.
 
+## Команды
+- `/start` - Приветственное сообщение
+- `/help` - Список команд
+- `/weather` - Прогноз погоды для путешествия
+
 ## Установка и запуск
 
 ### 1. Клонирование репозитория
@@ -31,9 +36,9 @@ pip install -r requirements.txt
 ### 3. Настройка переменных окружения
 Создайте файл `.env` в корневой папке проекта и добавьте в него следующие переменные:
 ```
-YANDEX_WEATHER_API=ваш_ключ_от_Yandex_Weather_API
-YANDEX_GEOCODE_API=ваш_ключ_от_Yandex_Geocode_API
-BOT_TOKEN=ваш_токен_телеграм_бота
+WEATHER_KEY="YOUR_KEY"
+GEOCODE_KEY="YOUR_KEY"
+BOT_TOKEN="YOUR_KEY"
 ```
 
 ### 4. Дополнительные файлы
@@ -49,5 +54,6 @@ python main.py
 Бот будет готов к использованию в вашем Telegram.
 
 ## Примечания
-- Получить ключи API для Yandex Weather и Yandex Geocode можно на [официальном сайте Яндекса](https://developer.tech.yandex.ru/).
+- Получить ключ API для Yandex Weather можно на [Yandex Weather Api]"https://yandex.ru/dev/"
+- Получить ключ API для Yandex Geocoder можно на [Yandex Maps Api](https://yandex.ru/maps-api/products).
 - Токен для телеграм-бота можно создать с помощью [BotFather](https://core.telegram.org/bots).
